@@ -2,12 +2,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
-
-const TABS = [
-  { key: "score", label: "🏆 总积分", field: "totalScore" },
-  { key: "coins", label: "🪙 金币榜", field: "coins" },
-  { key: "games", label: "🎮 游戏数", field: "gamesPlayed" },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function RankIcon({ rank }) {
   if (rank === 1) return <span className="text-2xl">🥇</span>;
@@ -21,6 +16,8 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("score");
   const [currentUser, setCurrentUser] = useState(null);
+  const { t } = useLanguage();
+  const lb = t.leaderboard;
 
   useEffect(() => {
     fetchLeaders();
@@ -46,30 +43,31 @@ export default function LeaderboardPage() {
     } catch {}
   }
 
-  const tab = TABS.find((t) => t.key === activeTab);
+  const tabFields = { score: "totalScore", coins: "coins", games: "gamesPlayed" };
+  const fieldKey = tabFields[activeTab] || "totalScore";
 
   return (
     <div className="min-h-screen">
       <Navbar />
       <div className="max-w-3xl mx-auto px-4 py-10">
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-black text-white mb-3">🏆 排行榜</h1>
-          <p className="text-slate-400 text-lg">与全球玩家一较高下，争夺第一宝座！</p>
+          <h1 className="text-4xl md:text-5xl font-black text-white mb-3">{lb.title}</h1>
+          <p className="text-slate-400 text-lg">{lb.subtitle}</p>
         </div>
 
         {/* Tabs */}
         <div className="flex bg-slate-800/60 rounded-2xl p-1.5 mb-8">
-          {TABS.map((t) => (
+          {lb.tabs.map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
-                activeTab === t.key
+                activeTab === tab.key
                   ? "bg-brand-600 text-white shadow-lg"
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -102,7 +100,7 @@ export default function LeaderboardPage() {
                     </span>
                   </div>
                   <div className="text-slate-400 text-xs font-medium">
-                    {(leader[tab?.field] || 0).toLocaleString()}
+                    {(leader[fieldKey] || 0).toLocaleString()}
                   </div>
                 </div>
               );
@@ -115,14 +113,14 @@ export default function LeaderboardPage() {
           {loading ? (
             <div className="p-8 text-center">
               <div className="text-4xl mb-2 animate-spin-slow">⏳</div>
-              <p className="text-slate-400">加载排行榜...</p>
+              <p className="text-slate-400">{lb.loading}</p>
             </div>
           ) : leaders.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-5xl mb-4">🌟</div>
-              <h3 className="text-xl font-bold text-white mb-2">还没有玩家上榜</h3>
-              <p className="text-slate-400 mb-6">快去答题，成为第一名！</p>
-              <Link href="/quiz" className="btn-primary">开始答题</Link>
+              <h3 className="text-xl font-bold text-white mb-2">{lb.noPlayers}</h3>
+              <p className="text-slate-400 mb-6">{lb.noPlayersDesc}</p>
+              <Link href="/quiz" className="btn-primary">{lb.startQuiz}</Link>
             </div>
           ) : (
             <div className="divide-y divide-slate-700/50">
@@ -152,15 +150,15 @@ export default function LeaderboardPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`font-bold truncate ${isCurrentUser ? "text-brand-300" : "text-white"}`}>
                           {leader.username}
-                          {isCurrentUser && <span className="text-brand-400 ml-1">(你)</span>}
+                          {isCurrentUser && <span className="text-brand-400 ml-1">{lb.you}</span>}
                         </span>
                         {leader.badges?.[0] && (
                           <span className="text-sm">{leader.badges[0].icon}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5 flex-wrap">
-                        <span>🎮 {leader.gamesPlayed} 局</span>
-                        {leader.streak > 0 && <span>🔥 {leader.streak}天连胜</span>}
+                        <span>🎮 {leader.gamesPlayed} {lb.gamesPlayed}</span>
+                        {leader.streak > 0 && <span>🔥 {leader.streak}{lb.dayStreak}</span>}
                         <span>Lv.{leader.level}</span>
                       </div>
                     </div>
@@ -170,10 +168,10 @@ export default function LeaderboardPage() {
                         activeTab === "coins" ? "text-gold-400" :
                         activeTab === "score" ? "text-brand-400" : "text-purple-400"
                       }`}>
-                        {(leader[tab?.field] || 0).toLocaleString()}
+                        {(leader[fieldKey] || 0).toLocaleString()}
                       </div>
                       <div className="text-xs text-slate-500">
-                        {activeTab === "coins" ? "金币" : activeTab === "score" ? "积分" : "次"}
+                        {activeTab === "coins" ? lb.coinsUnit : activeTab === "score" ? lb.scoreUnit : lb.gamesUnit}
                       </div>
                     </div>
                   </div>
@@ -187,10 +185,10 @@ export default function LeaderboardPage() {
         {!currentUser && (
           <div className="mt-8 card p-6 text-center bg-gradient-to-br from-brand-600/20 to-purple-600/20 border-brand-500/30">
             <div className="text-4xl mb-3">🚀</div>
-            <h3 className="text-white font-bold text-xl mb-2">上榜就差你一步！</h3>
-            <p className="text-slate-400 mb-4">注册账号，开始答题，赢取金币！</p>
+            <h3 className="text-white font-bold text-xl mb-2">{lb.ctaTitle}</h3>
+            <p className="text-slate-400 mb-4">{lb.ctaDesc}</p>
             <Link href="/auth?mode=register" className="btn-primary">
-              免费注册
+              {lb.ctaBtn}
             </Link>
           </div>
         )}
