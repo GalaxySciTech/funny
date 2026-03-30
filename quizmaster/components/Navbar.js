@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
@@ -17,7 +18,7 @@ export default function Navbar() {
 
   async function fetchUser() {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await apiFetch("/api/auth/me");
       const data = await res.json();
       setUser(data.user);
     } catch {
@@ -26,7 +27,7 @@ export default function Navbar() {
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await apiFetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     router.push("/");
     router.refresh();

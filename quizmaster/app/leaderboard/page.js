@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 function RankIcon({ rank }) {
   if (rank === 1) return <span className="text-2xl">🥇</span>;
@@ -27,7 +28,7 @@ export default function LeaderboardPage() {
   async function fetchLeaders() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/leaderboard?type=${activeTab}`);
+      const res = await apiFetch(`/api/leaderboard?type=${activeTab}`);
       const data = await res.json();
       setLeaders(data.leaders || []);
     } finally {
@@ -37,7 +38,7 @@ export default function LeaderboardPage() {
 
   async function fetchUser() {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await apiFetch("/api/auth/me");
       const data = await res.json();
       setCurrentUser(data.user);
     } catch {}
