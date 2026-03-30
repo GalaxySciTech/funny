@@ -1,4 +1,5 @@
 import "./globals.css";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export const metadata = {
   title: "QuizMaster Pro - Test Your Knowledge & Win Coins!",
@@ -9,8 +10,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="zh-CN">
-      <body className="antialiased">{children}</body>
+    <html lang="en">
+      <body className="antialiased">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

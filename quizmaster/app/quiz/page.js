@@ -3,34 +3,16 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const CATEGORIES = [
-  { key: "all", label: "全部", icon: "🌟" },
-  { key: "science", label: "科学", icon: "🔬" },
-  { key: "history", label: "历史", icon: "📜" },
-  { key: "geography", label: "地理", icon: "🌏" },
-  { key: "sports", label: "体育", icon: "⚽" },
-  { key: "technology", label: "科技", icon: "💻" },
-  { key: "entertainment", label: "娱乐", icon: "🎬" },
-  { key: "food", label: "美食", icon: "🍜" },
-  { key: "animals", label: "动物", icon: "🦁" },
-];
-
-const DIFFICULTIES = [
-  { key: "all", label: "全部难度" },
-  { key: "easy", label: "简单", color: "text-emerald-400" },
-  { key: "medium", label: "中等", color: "text-yellow-400" },
-  { key: "hard", label: "困难", color: "text-red-400" },
-];
-
-function DifficultyBadge({ difficulty }) {
+function DifficultyBadge({ difficulty, labels }) {
   const map = {
-    easy: { label: "简单", cls: "badge-green" },
-    medium: { label: "中等", cls: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 badge" },
-    hard: { label: "困难", cls: "bg-red-500/20 text-red-400 border border-red-500/30 badge" },
+    easy: { cls: "badge-green" },
+    medium: { cls: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 badge" },
+    hard: { cls: "bg-red-500/20 text-red-400 border border-red-500/30 badge" },
   };
   const d = map[difficulty] || map.medium;
-  return <span className={d.cls}>{d.label}</span>;
+  return <span className={d.cls}>{labels[difficulty] || difficulty}</span>;
 }
 
 function QuizList() {
@@ -41,6 +23,8 @@ function QuizList() {
   const [user, setUser] = useState(null);
   const [selectedCat, setSelectedCat] = useState(searchParams.get("category") || "all");
   const [selectedDiff, setSelectedDiff] = useState("all");
+  const { t } = useLanguage();
+  const q = t.quiz;
 
   useEffect(() => {
     fetchUser();
@@ -84,13 +68,13 @@ function QuizList() {
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="mb-10">
-          <h1 className="text-4xl font-black text-white mb-2">📚 题库中心</h1>
-          <p className="text-slate-400">选择你感兴趣的主题，开始答题赢金币！</p>
+          <h1 className="text-4xl font-black text-white mb-2">{q.title}</h1>
+          <p className="text-slate-400">{q.subtitle}</p>
         </div>
 
         {/* Category Filter */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-          {CATEGORIES.map((cat) => (
+          {q.allCategories.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setSelectedCat(cat.key)}
@@ -107,7 +91,7 @@ function QuizList() {
 
         {/* Difficulty Filter */}
         <div className="flex gap-2 mb-8">
-          {DIFFICULTIES.map((d) => (
+          {q.difficulties.map((d) => (
             <button
               key={d.key}
               onClick={() => setSelectedDiff(d.key)}
@@ -136,8 +120,8 @@ function QuizList() {
         ) : quizzes.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-bold text-white mb-2">暂无题库</h3>
-            <p className="text-slate-400">该分类还没有题目，请换一个试试</p>
+            <h3 className="text-2xl font-bold text-white mb-2">{q.noQuiz}</h3>
+            <p className="text-slate-400">{q.noQuizDesc}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -150,7 +134,7 @@ function QuizList() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="text-4xl">{quiz.emoji || "🧠"}</div>
                   {quiz.isPremium && (
-                    <span className="badge-gold">💎 高奖励</span>
+                    <span className="badge-gold">{q.premiumBadge}</span>
                   )}
                 </div>
 
@@ -159,31 +143,29 @@ function QuizList() {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <DifficultyBadge difficulty={quiz.difficulty} />
-                    <span className="text-slate-500">{quiz.questions?.length || 0} 题</span>
+                    <DifficultyBadge difficulty={quiz.difficulty} labels={q.difficultyLabels} />
+                    <span className="text-slate-500">{quiz.questions?.length || 0} {q.questions}</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">⏱️ {quiz.timePerQuestion}秒/题</span>
-                    <span className="text-gold-400 font-medium">🪙 最高 {quiz.maxReward}</span>
+                    <span className="text-slate-500">⏱️ {quiz.timePerQuestion}{q.secPerQ}</span>
+                    <span className="text-gold-400 font-medium">🪙 {q.maxReward} {quiz.maxReward}</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm text-slate-500">
-                    <span>🎮 {quiz.playCount?.toLocaleString()} 次</span>
+                    <span>🎮 {quiz.playCount?.toLocaleString()} {q.plays}</span>
                     {quiz.entryFee > 0 && (
-                      <span className="text-orange-400">入场 {quiz.entryFee} 🪙</span>
+                      <span className="text-orange-400">{q.entryFee} {quiz.entryFee} 🪙</span>
                     )}
                   </div>
 
                   <button
                     onClick={() => handleStartQuiz(quiz)}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
-                      quiz.isPremium
-                        ? "btn-gold"
-                        : "btn-primary"
+                      quiz.isPremium ? "btn-gold" : "btn-primary"
                     }`}
                   >
-                    {quiz.isPremium ? "💎 立即挑战" : "🚀 开始答题"}
+                    {quiz.isPremium ? q.premiumBtn : q.startBtn}
                   </button>
                 </div>
               </div>
@@ -196,8 +178,9 @@ function QuizList() {
 }
 
 export default function QuizPage() {
+  const { t } = useLanguage();
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">⏳ 加载中...</div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">{t.quiz.loading}</div></div>}>
       <QuizList />
     </Suspense>
   );

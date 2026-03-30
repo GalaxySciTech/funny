@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function Confetti() {
   const colors = ["#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"];
@@ -65,8 +66,10 @@ function PlayGame() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const quizId = searchParams.get("id");
+  const { t } = useLanguage();
+  const pl = t.play;
 
-  const [phase, setPhase] = useState("loading"); // loading | countdown | playing | result
+  const [phase, setPhase] = useState("loading");
   const [quiz, setQuiz] = useState(null);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
@@ -81,7 +84,7 @@ function PlayGame() {
 
   useEffect(() => {
     if (!quizId) {
-      setError("无效的题库ID");
+      setError(pl.invalidId);
       return;
     }
     loadQuiz();
@@ -92,7 +95,7 @@ function PlayGame() {
       const res = await fetch(`/api/quiz/play?id=${quizId}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "加载失败");
+        setError(data.error || pl.loadFailed);
         return;
       }
       setQuiz(data.quiz);
@@ -100,7 +103,7 @@ function PlayGame() {
       setTimeLeft(data.quiz.timePerQuestion);
       setPhase("countdown");
     } catch {
-      setError("网络错误，请重试");
+      setError(pl.networkError);
     }
   }
 
@@ -175,9 +178,9 @@ function PlayGame() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="card p-10 text-center max-w-md">
           <div className="text-5xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-white mb-2">加载失败</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{pl.loadFailed}</h2>
           <p className="text-slate-400 mb-6">{error}</p>
-          <Link href="/quiz" className="btn-primary">返回题库</Link>
+          <Link href="/quiz" className="btn-primary">{pl.backToQuiz}</Link>
         </div>
       </div>
     );
@@ -188,7 +191,7 @@ function PlayGame() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4 animate-bounce-slow">🧠</div>
-          <p className="text-white text-xl font-bold">加载题目中...</p>
+          <p className="text-white text-xl font-bold">{pl.loading}</p>
           <div className="mt-4 flex gap-2 justify-center">
             {[0, 1, 2].map((i) => (
               <div key={i} className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -205,11 +208,11 @@ function PlayGame() {
         <div className="text-center animate-scale-in">
           <div className="text-6xl mb-4">{quiz?.emoji || "🧠"}</div>
           <h2 className="text-3xl font-black text-white mb-2">{quiz?.title}</h2>
-          <p className="text-slate-400 mb-10">{quiz?.questions?.length} 道题 · {quiz?.timePerQuestion}秒/题</p>
+          <p className="text-slate-400 mb-10">{quiz?.questions?.length} {pl.questionsCount} · {quiz?.timePerQuestion}{pl.secPerQ}</p>
           <div className="text-9xl font-black text-brand-400 animate-pulse-fast">
-            {countdown === 0 ? "GO!" : countdown}
+            {countdown === 0 ? pl.go : countdown}
           </div>
-          <p className="text-slate-400 mt-6">准备好了吗？</p>
+          <p className="text-slate-400 mt-6">{pl.getReady}</p>
         </div>
       </div>
     );
@@ -230,32 +233,32 @@ function PlayGame() {
                 {isGreat ? "🏆" : isGood ? "🎯" : "💪"}
               </div>
               <h2 className="text-4xl font-black text-white mb-2">
-                {isGreat ? "太棒了！" : isGood ? "做得不错！" : "继续加油！"}
+                {isGreat ? pl.great : isGood ? pl.good : pl.keepGoing}
               </h2>
-              <p className="text-slate-400 text-lg">正确率：{accuracy}%</p>
+              <p className="text-slate-400 text-lg">{pl.accuracy}{accuracy}%</p>
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-slate-700/50 rounded-xl p-4 text-center">
                 <div className="text-3xl font-black text-brand-400">{result?.score ?? score}</div>
-                <div className="text-slate-400 text-sm mt-1">总分</div>
+                <div className="text-slate-400 text-sm mt-1">{pl.totalScore}</div>
               </div>
               <div className="bg-slate-700/50 rounded-xl p-4 text-center">
                 <div className="text-3xl font-black text-emerald-400">
                   {result?.correctCount ?? 0}/{result?.totalQuestions ?? quiz?.questions?.length}
                 </div>
-                <div className="text-slate-400 text-sm mt-1">答对题数</div>
+                <div className="text-slate-400 text-sm mt-1">{pl.correct}</div>
               </div>
               <div className="bg-gold-500/10 border border-gold-500/20 rounded-xl p-4 text-center">
                 <div className="text-3xl font-black text-gold-400">+{result?.coinsEarned ?? 0}</div>
-                <div className="text-slate-400 text-sm mt-1">获得金币</div>
+                <div className="text-slate-400 text-sm mt-1">{pl.coinsEarned}</div>
               </div>
             </div>
 
             {/* Answer Review */}
             {result?.results && (
               <div className="space-y-3 mb-8">
-                <h3 className="text-white font-bold text-lg">📋 答题回顾</h3>
+                <h3 className="text-white font-bold text-lg">{pl.reviewTitle}</h3>
                 {result.results.map((r, i) => (
                   <div
                     key={i}
@@ -271,7 +274,7 @@ function PlayGame() {
                         <p className="text-white text-sm font-medium">{quiz?.questions?.[i]?.question}</p>
                         {!r.isCorrect && (
                           <p className="text-slate-400 text-sm mt-1">
-                            正确答案：{quiz?.questions?.[i]?.options?.[r.correctIndex]}
+                            {pl.correctAnswer}{quiz?.questions?.[i]?.options?.[r.correctIndex]}
                           </p>
                         )}
                         {r.explanation && (
@@ -298,13 +301,13 @@ function PlayGame() {
                 }}
                 className="flex-1 btn-secondary flex items-center justify-center gap-2"
               >
-                🔄 再来一次
+                {pl.playAgain}
               </button>
               <Link href="/quiz" className="flex-1 btn-primary flex items-center justify-center gap-2">
-                📚 换一题
+                {pl.nextQuiz}
               </Link>
               <Link href="/leaderboard" className="flex-1 btn-secondary flex items-center justify-center gap-2">
-                🏆 排行榜
+                {pl.viewLeaderboard}
               </Link>
             </div>
           </div>
@@ -325,13 +328,13 @@ function PlayGame() {
       <div className="max-w-3xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-3">
           <Link href="/quiz" className="text-slate-400 hover:text-white text-sm flex items-center gap-1">
-            ← 退出
+            {pl.exit}
           </Link>
           <span className="text-slate-400 text-sm">
             {currentQ + 1} / {quiz.questions.length}
           </span>
           <div className="flex items-center gap-1 text-gold-400 font-bold text-sm">
-            🪙 {score}分
+            🪙 {score} {pl.scoreLabel}
           </div>
         </div>
 
@@ -351,7 +354,7 @@ function PlayGame() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-4">
                 <span className="badge badge-blue">Q{currentQ + 1}</span>
-                <span className="text-slate-400 text-sm">+{question.points}分</span>
+                <span className="text-slate-400 text-sm">+{question.points} {pl.scoreLabel}</span>
               </div>
               <p className="text-white text-xl font-bold leading-relaxed">{question.question}</p>
             </div>
@@ -416,8 +419,9 @@ function PlayGame() {
 }
 
 export default function PlayPage() {
+  const { t } = useLanguage();
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">⏳ 加载中...</div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">{t.play.loadingFallback}</div></div>}>
       <PlayGame />
     </Suspense>
   );

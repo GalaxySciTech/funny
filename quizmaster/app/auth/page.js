@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function AuthForm() {
   const searchParams = useSearchParams();
@@ -11,6 +12,8 @@ function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { t } = useLanguage();
+  const a = t.auth;
 
   useEffect(() => {
     setMode(initialMode);
@@ -36,14 +39,14 @@ function AuthForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "操作失败");
+        setError(data.error || a.operationFailed);
         return;
       }
 
       router.push("/quiz");
       router.refresh();
     } catch {
-      setError("网络错误，请重试");
+      setError(a.networkError);
     } finally {
       setLoading(false);
     }
@@ -58,10 +61,10 @@ function AuthForm() {
             <span className="font-black text-2xl bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent">QuizMaster</span>
           </Link>
           <h1 className="text-3xl font-black text-white">
-            {mode === "register" ? "🎉 创建账号" : "👋 欢迎回来"}
+            {mode === "register" ? a.createAccount : a.welcomeBack}
           </h1>
           <p className="text-slate-400 mt-2">
-            {mode === "register" ? "注册即送200金币！" : "继续你的知识冒险"}
+            {mode === "register" ? a.registerSubtitle : a.loginSubtitle}
           </p>
         </div>
 
@@ -74,7 +77,7 @@ function AuthForm() {
                 mode === "login" ? "bg-brand-600 text-white shadow" : "text-slate-400 hover:text-white"
               }`}
             >
-              登录
+              {a.loginTab}
             </button>
             <button
               onClick={() => setMode("register")}
@@ -82,17 +85,17 @@ function AuthForm() {
                 mode === "register" ? "bg-brand-600 text-white shadow" : "text-slate-400 hover:text-white"
               }`}
             >
-              注册
+              {a.registerTab}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
               <div>
-                <label className="block text-slate-300 text-sm font-medium mb-2">用户名</label>
+                <label className="block text-slate-300 text-sm font-medium mb-2">{a.usernameLabel}</label>
                 <input
                   type="text"
-                  placeholder="3-20位字母或数字"
+                  placeholder={a.usernamePlaceholder}
                   className="input-field"
                   value={form.username}
                   onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -104,7 +107,7 @@ function AuthForm() {
             )}
 
             <div>
-              <label className="block text-slate-300 text-sm font-medium mb-2">邮箱</label>
+              <label className="block text-slate-300 text-sm font-medium mb-2">{a.emailLabel}</label>
               <input
                 type="email"
                 placeholder="your@email.com"
@@ -116,10 +119,10 @@ function AuthForm() {
             </div>
 
             <div>
-              <label className="block text-slate-300 text-sm font-medium mb-2">密码</label>
+              <label className="block text-slate-300 text-sm font-medium mb-2">{a.passwordLabel}</label>
               <input
                 type="password"
-                placeholder={mode === "register" ? "至少6位" : "输入密码"}
+                placeholder={mode === "register" ? a.passwordPlaceholderRegister : a.passwordPlaceholderLogin}
                 className="input-field"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -140,11 +143,11 @@ function AuthForm() {
               className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <><span className="animate-spin">⏳</span> 处理中...</>
+                <><span className="animate-spin">⏳</span> {a.processing}</>
               ) : mode === "register" ? (
-                <><span>🚀</span> 立即注册</>
+                <>{a.registerBtn}</>
               ) : (
-                <><span>🎯</span> 登录</>
+                <>{a.loginBtn}</>
               )}
             </button>
           </form>
@@ -152,21 +155,22 @@ function AuthForm() {
           {mode === "register" && (
             <div className="mt-6 p-4 bg-gold-500/10 border border-gold-500/20 rounded-xl">
               <div className="flex items-center gap-2 text-gold-400 text-sm font-medium mb-2">
-                <span>🎁</span> 新用户福利
+                {a.newUserBenefits}
               </div>
               <ul className="space-y-1 text-slate-400 text-sm">
-                <li>✅ 注册即送 200 金币</li>
-                <li>✅ 前3天免费访问所有题库</li>
-                <li>✅ 专属新手徽章</li>
+                <li>{a.benefit1}</li>
+                <li>{a.benefit2}</li>
+                <li>{a.benefit3}</li>
               </ul>
             </div>
           )}
         </div>
 
         <p className="text-center text-slate-500 text-sm mt-6">
-          继续即代表同意我们的
-          <span className="text-brand-400 cursor-pointer hover:underline"> 服务条款</span> 和
-          <span className="text-brand-400 cursor-pointer hover:underline"> 隐私政策</span>
+          {a.terms}
+          <span className="text-brand-400 cursor-pointer hover:underline">{a.termsLink}</span>
+          {a.and}
+          <span className="text-brand-400 cursor-pointer hover:underline">{a.privacyLink}</span>
         </p>
       </div>
     </div>
@@ -174,8 +178,9 @@ function AuthForm() {
 }
 
 export default function AuthPage() {
+  const { t } = useLanguage();
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">⏳ 加载中...</div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-white text-2xl">{t.auth.loading}</div></div>}>
       <AuthForm />
     </Suspense>
   );

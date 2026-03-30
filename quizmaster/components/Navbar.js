@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Navbar() {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { lang, toggleLang, t } = useLanguage();
 
   useEffect(() => {
     fetchUser();
@@ -31,9 +33,9 @@ export default function Navbar() {
   }
 
   const navLinks = [
-    { href: "/", label: "首页", icon: "🏠" },
-    { href: "/quiz", label: "题库", icon: "📚" },
-    { href: "/leaderboard", label: "排行榜", icon: "🏆" },
+    { href: "/", label: t.nav.home, icon: "🏠" },
+    { href: "/quiz", label: t.nav.quiz, icon: "📚" },
+    { href: "/leaderboard", label: t.nav.leaderboard, icon: "🏆" },
   ];
 
   return (
@@ -69,6 +71,15 @@ export default function Navbar() {
 
           {/* User Actions */}
           <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLang}
+              title={lang === "zh" ? "Switch to English" : "切换中文"}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-700/60 hover:bg-slate-600/70 border border-slate-600/50 text-slate-300 hover:text-white text-xs font-bold transition-all"
+            >
+              {lang === "zh" ? "EN" : "中"}
+            </button>
+
             {user ? (
               <>
                 <Link href="/profile" className="hidden sm:flex items-center gap-2 bg-gold-500/10 border border-gold-500/20 rounded-xl px-3 py-1.5 hover:bg-gold-500/20 transition-all">
@@ -88,16 +99,16 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="hidden sm:block text-slate-400 hover:text-white text-sm px-3 py-1.5 rounded-lg hover:bg-slate-700/50 transition-all"
                 >
-                  退出
+                  {t.nav.logout}
                 </button>
               </>
             ) : (
               <div className="hidden sm:flex items-center gap-2">
                 <Link href="/auth?mode=login" className="btn-secondary py-2 px-4 text-sm">
-                  登录
+                  {t.nav.login}
                 </Link>
                 <Link href="/auth?mode=register" className="btn-primary py-2 px-4 text-sm">
-                  注册
+                  {t.nav.register}
                 </Link>
               </div>
             )}
@@ -140,13 +151,13 @@ export default function Navbar() {
                   <span>👤</span> {user.username} · 🪙{user.coins}
                 </Link>
                 <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:bg-slate-700/50">
-                  🚪 退出登录
+                  {t.nav.logoutMobile}
                 </button>
               </>
             ) : (
               <div className="flex gap-2 pt-2">
-                <Link href="/auth?mode=login" onClick={() => setMenuOpen(false)} className="flex-1 btn-secondary py-2 text-sm text-center">登录</Link>
-                <Link href="/auth?mode=register" onClick={() => setMenuOpen(false)} className="flex-1 btn-primary py-2 text-sm text-center">注册</Link>
+                <Link href="/auth?mode=login" onClick={() => setMenuOpen(false)} className="flex-1 btn-secondary py-2 text-sm text-center">{t.nav.login}</Link>
+                <Link href="/auth?mode=register" onClick={() => setMenuOpen(false)} className="flex-1 btn-primary py-2 text-sm text-center">{t.nav.register}</Link>
               </div>
             )}
           </div>
