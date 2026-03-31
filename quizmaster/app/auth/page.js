@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 function AuthForm() {
   const searchParams = useSearchParams();
@@ -30,9 +31,8 @@ function AuthForm() {
         ? { username: form.username, email: form.email, password: form.password }
         : { email: form.email, password: form.password };
 
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 

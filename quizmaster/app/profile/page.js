@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 const COIN_PACKAGES = [
   { coins: 500, price: "¥6", bonus: 0, icon: "💰", popular: false },
@@ -28,7 +29,7 @@ export default function ProfilePage() {
 
   async function fetchStats() {
     try {
-      const res = await fetch("/api/user/stats");
+      const res = await apiFetch("/api/user/stats");
       if (res.status === 401) {
         router.push("/auth?mode=login");
         return;
@@ -47,9 +48,8 @@ export default function ProfilePage() {
     await new Promise((r) => setTimeout(r, 1500));
     try {
       const totalCoins = pkg.coins + pkg.bonus;
-      const res = await fetch("/api/user/coins", {
+      const res = await apiFetch("/api/user/coins", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "purchase", amount: totalCoins }),
       });
       const data = await res.json();

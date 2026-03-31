@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 function Confetti() {
   const colors = ["#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"];
@@ -92,7 +93,7 @@ function PlayGame() {
 
   async function loadQuiz() {
     try {
-      const res = await fetch(`/api/quiz/play?id=${quizId}`);
+      const res = await apiFetch(`/api/quiz/play?id=${quizId}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || pl.loadFailed);
@@ -161,9 +162,8 @@ function PlayGame() {
     setPhase("result");
     const timeTaken = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
     try {
-      const res = await fetch("/api/quiz/submit", {
+      const res = await apiFetch("/api/quiz/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quizId, answers, timeTaken }),
       });
       const data = await res.json();

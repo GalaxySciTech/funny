@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiFetch } from "@/lib/api";
 
 function DifficultyBadge({ difficulty, labels }) {
   const map = {
@@ -33,7 +34,7 @@ function QuizList() {
 
   async function fetchUser() {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await apiFetch("/api/auth/me");
       const data = await res.json();
       setUser(data.user);
     } catch {}
@@ -45,7 +46,7 @@ function QuizList() {
       const params = new URLSearchParams();
       if (selectedCat !== "all") params.set("category", selectedCat);
       if (selectedDiff !== "all") params.set("difficulty", selectedDiff);
-      const res = await fetch(`/api/quiz?${params}`);
+      const res = await apiFetch(`/api/quiz?${params}`);
       const data = await res.json();
       setQuizzes(data.quizzes || []);
     } catch {
