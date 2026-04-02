@@ -1,7 +1,7 @@
 /**
  * Central helper for all API calls.
  *
- * When NEXT_PUBLIC_API_URL is set (e.g. https://api.your-server.com),
+ * When NEXT_PUBLIC_API_URL is set (e.g. https://api.quiz.vin),
  * every request is routed to that external backend.
  * When the env-var is absent the app falls back to relative /api/* paths
  * which hit the built-in Next.js route handlers (for local dev without the
