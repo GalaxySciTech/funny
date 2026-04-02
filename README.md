@@ -1,1 +1,195 @@
-# funny
+# QuizMaster Pro 🧠
+
+知识竞赛平台 — 答题赚金币、冲排行榜、Pro 会员无限畅玩。
+
+## 项目结构
+
+```
+├── frontend/          # Next.js 14 前端（App Router + Tailwind CSS）
+├── backend/           # Express.js 独立后端 API
+├── docker-compose.yml # 一键启动 MongoDB + 后端
+└── README.md
+```
+
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 前端 | Next.js 14、React 18、Tailwind CSS 3 |
+| 后端 | Express 4、Mongoose 8、JWT |
+| 数据库 | MongoDB 7 |
+| 部署 | Docker Compose / Vercel + VPS |
+
+---
+
+## 快速启动
+
+### 方式一：纯前端本地开发（最简单）
+
+前端内置了 Next.js API Routes，无需单独启动后端，只需要一个 MongoDB 即可。
+
+```bash
+# 1. 启动 MongoDB（任选一种）
+#    a) 本地已安装 MongoDB：确保 mongod 正在运行
+#    b) 用 Docker：
+docker run -d -p 27017:27017 --name quizmaster_mongo mongo:7
+
+# 2. 进入前端目录
+cd frontend
+
+# 3. 配置环境变量
+cp .env.example .env.local
+# 编辑 .env.local，确保 MONGODB_URI 指向你的 MongoDB
+# 默认值：mongodb://localhost:27017/quizmaster
+
+# 4. 安装依赖
+npm install
+
+# 5. 初始化题库数据（首次运行）
+npm run seed
+
+# 6. 启动开发服务器
+npm run dev
+```
+
+打开浏览器访问 **http://localhost:3000** 即可。
+
+---
+
+### 方式二：前端 + 独立后端（前后端分离）
+
+适用于需要将后端部署到独立服务器的场景。
+
+```bash
+# ── 终端 1：启动 MongoDB ──
+docker run -d -p 27017:27017 --name quizmaster_mongo mongo:7
+
+# ── 终端 2：启动后端 ──
+cd backend
+cp .env.example .env
+# 编辑 .env（参考下方环境变量说明）
+npm install
+npm run seed    # 首次运行，初始化题库
+npm run dev     # 开发模式（nodemon 热重载）
+
+# ── 终端 3：启动前端 ──
+cd frontend
+cp .env.example .env.local
+# 编辑 .env.local，设置：
+#   NEXT_PUBLIC_API_URL=http://localhost:5000
+npm install
+npm run dev
+```
+
+- 前端：**http://localhost:3000**
+- 后端：**http://localhost:5000**
+- 后端健康检查：**http://localhost:5000/health**
+
+---
+
+### 方式三：Docker Compose（一键生产部署）
+
+```bash
+# 1. 配置环境变量
+cp docker-compose.env.example .env
+# 编辑 .env，设置 JWT_SECRET 和 ALLOWED_ORIGINS
+
+# 2. 构建并启动（MongoDB + 后端）
+docker compose up -d --build
+
+# 3. 初始化题库（首次部署）
+docker compose exec backend node src/scripts/seed.js
+
+# 4. 查看日志
+docker compose logs -f backend
+```
+
+后端运行在 `http://your-server:5000`，前端单独部署到 Vercel 并设置 `NEXT_PUBLIC_API_URL`。
+
+---
+
+## 环境变量
+
+### 后端（`backend/.env`）
+
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `MONGODB_URI` | MongoDB 连接字符串 | `mongodb://localhost:27017/quizmaster` |
+| `JWT_SECRET` | JWT 签名密钥 | `change_me_to_a_random_secret_string` |
+| `PORT` | 监听端口 | `5000` |
+| `ALLOWED_ORIGINS` | 允许跨域的前端地址（逗号分隔） | `http://localhost:3000` |
+| `NODE_ENV` | 运行环境 | `development` |
+
+### 前端（`frontend/.env.local`）
+
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | 独立后端地址（留空则使用内置 API Routes） | 空 |
+| `MONGODB_URI` | MongoDB 连接字符串（使用内置 API 时需要） | `mongodb://localhost:27017/quizmaster` |
+| `JWT_SECRET` | JWT 签名密钥（使用内置 API 时需要） | `change_me_to_a_random_secret_string` |
+
+---
+
+## API 接口
+
+### 认证
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/auth/register` | 注册（支持邀请码） |
+| POST | `/api/auth/login` | 登录 |
+| POST | `/api/auth/logout` | 登出 |
+| GET | `/api/auth/me` | 获取当前用户信息（含订阅状态、每日次数等） |
+
+### 题库
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/quiz` | 获取题库列表（支持分类/难度筛选） |
+| GET | `/api/quiz/play?id=` | 获取题目详情（检查每日次数限制） |
+| POST | `/api/quiz/submit` | 提交答题（金币倍率根据订阅等级计算） |
+
+### 订阅 & 会员
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/subscription/plans` | 获取订阅方案 |
+| GET | `/api/subscription/status` | 获取订阅状态 |
+| POST | `/api/subscription/subscribe` | 订阅（月卡/年卡） |
+| POST | `/api/subscription/cancel` | 取消自动续费 |
+| POST | `/api/subscription/start-trial` | 开启 3 天 Pro 试用 |
+| POST | `/api/subscription/claim-daily-reward` | 领取每日签到奖励 |
+| POST | `/api/subscription/use-streak-freeze` | 使用连胜保护卡 |
+| POST | `/api/subscription/referral` | 使用邀请码 |
+
+### 其他
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/leaderboard` | 排行榜（积分/金币/场次） |
+| GET | `/api/user/stats` | 用户详细统计 |
+| POST | `/api/user/coins` | 金币操作 |
+| GET | `/health` | 健康检查 |
+
+---
+
+## 商业模式
+
+| 功能 | 免费版 | 月度 Pro（¥18） | 年度 Pro（¥128） |
+|---|---|---|---|
+| 每日答题次数 | 3 次 | 无限 | 无限 |
+| 金币奖励倍率 | 1x | 2x | 3x |
+| 每日签到奖励倍率 | 1x | 3x | 3x |
+| 连胜保护卡 | 无 | 2 张/月 | 12 张/年 |
+| 订阅赠送金币 | — | 500 | 8,000 |
+| Pro 专属徽章 | 无 | 有 | 有 |
+
+### 增长引擎
+
+- **每日硬限制 3 次**：最强付费转化驱动
+- **每日签到 7 天循环**：日活留存
+- **连胜保护卡**：Pro 专属，用户不敢断订阅
+- **邀请好友**：邀请人得 300 金币，被邀请人得 200 金币
+- **3 天免费试用**：降低首次付费门槛
+- **年卡 3 倍 vs 月卡 2 倍**：推动用户选择年卡
+- **损失厌恶取消流程**：展示取消后失去的所有特权
