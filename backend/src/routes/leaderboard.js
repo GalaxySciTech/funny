@@ -15,12 +15,27 @@ router.get("/", async (req, res) => {
 
     const leaders = await User.find({})
       .select(
-        "username totalScore coins gamesPlayed gamesWon streak level badges"
+        "username totalScore coins gamesPlayed gamesWon streak level badges isPremium premiumUntil subscriptionPlan loyaltyTier"
       )
       .sort(sortField)
       .limit(50);
 
-    return res.json({ leaders });
+    const enriched = leaders.map((u) => ({
+      _id: u._id,
+      username: u.username,
+      totalScore: u.totalScore,
+      coins: u.coins,
+      gamesPlayed: u.gamesPlayed,
+      gamesWon: u.gamesWon,
+      streak: u.streak,
+      level: u.level,
+      badges: u.badges,
+      isPremium: u.getEffectivePremium(),
+      loyaltyTier: u.loyaltyTier,
+      subscriptionPlan: u.subscriptionPlan,
+    }));
+
+    return res.json({ leaders: enriched });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "获取排行榜失败" });

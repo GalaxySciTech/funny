@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth");
 const quizRoutes = require("./routes/quiz");
 const leaderboardRoutes = require("./routes/leaderboard");
 const userRoutes = require("./routes/user");
+const subscriptionRoutes = require("./routes/subscription");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,6 +41,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/subscription", subscriptionRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

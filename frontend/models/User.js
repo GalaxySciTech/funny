@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
   {
@@ -16,10 +16,7 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
-    password: {
-      type: String,
-      required: true,
-    },
+    password: { type: String, required: true },
     avatar: { type: String, default: "" },
     coins: { type: Number, default: 100 },
     totalScore: { type: Number, default: 0 },
@@ -29,15 +26,7 @@ const UserSchema = new mongoose.Schema(
     maxStreak: { type: Number, default: 0 },
     lastPlayedAt: { type: Date, default: null },
     level: { type: Number, default: 1 },
-    badges: [
-      {
-        name: String,
-        icon: String,
-        earnedAt: Date,
-      },
-    ],
-
-    // Subscription system
+    badges: [{ name: String, icon: String, earnedAt: Date }],
     isPremium: { type: Boolean, default: false },
     premiumUntil: { type: Date, default: null },
     subscriptionPlan: {
@@ -47,38 +36,22 @@ const UserSchema = new mongoose.Schema(
     },
     subscriptionAutoRenew: { type: Boolean, default: true },
     totalPremiumDays: { type: Number, default: 0 },
-
-    // Daily play limit for free users (resets at midnight)
     dailyPlaysUsed: { type: Number, default: 0 },
     dailyPlaysDate: { type: String, default: "" },
-
-    // Daily reward system
     dailyRewardDay: { type: Number, default: 0 },
     dailyRewardLastClaimed: { type: String, default: "" },
     dailyRewardStreak: { type: Number, default: 0 },
-
-    // Referral system
     referralCode: { type: String, unique: true, sparse: true },
-    referredBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     referralCount: { type: Number, default: 0 },
-
-    // Loyalty tier (based on total spend + engagement)
     loyaltyPoints: { type: Number, default: 0 },
     loyaltyTier: {
       type: String,
       enum: ["bronze", "silver", "gold", "diamond"],
       default: "bronze",
     },
-
-    // Streak freeze (Pro feature)
     streakFreezeCount: { type: Number, default: 0 },
     streakFreezeUsedAt: { type: Date, default: null },
-
-    // Trial tracking
     trialUsed: { type: Boolean, default: false },
     trialEndsAt: { type: Date, default: null },
   },
@@ -131,4 +104,4 @@ UserSchema.pre("save", function (next) {
   next();
 });
 
-module.exports = mongoose.models.User || mongoose.model("User", UserSchema);
+export default mongoose.models.User || mongoose.model("User", UserSchema);

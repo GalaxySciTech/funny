@@ -56,7 +56,6 @@ export default function LeaderboardPage() {
           <p className="text-slate-400 text-lg">{lb.subtitle}</p>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-slate-800/60 rounded-2xl p-1.5 mb-8">
           {lb.tabs.map((tab) => (
             <button
@@ -89,10 +88,17 @@ export default function LeaderboardPage() {
               return (
                 <div key={rank} className="flex flex-col items-center gap-2 flex-1 max-w-28">
                   <div className="text-2xl">{rank === 1 ? "👑" : ""}</div>
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${colors[i]} flex items-center justify-center text-xl font-black text-white shadow-lg`}>
-                    {leader.username?.[0]?.toUpperCase()}
+                  <div className="relative">
+                    <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${colors[i]} flex items-center justify-center text-xl font-black text-white shadow-lg`}>
+                      {leader.username?.[0]?.toUpperCase()}
+                    </div>
+                    {leader.isPremium && (
+                      <span className="absolute -bottom-1 -right-1 text-xs bg-gradient-to-r from-gold-400 to-amber-500 text-slate-900 font-black px-1 py-0.5 rounded-md">
+                        PRO
+                      </span>
+                    )}
                   </div>
-                  <div className="text-white font-bold text-sm text-center truncate w-full text-center">
+                  <div className="text-white font-bold text-sm text-center truncate w-full">
                     {leader.username}
                   </div>
                   <div className={`w-full ${heights[i]} bg-gradient-to-t ${colors[i]} rounded-t-xl flex items-center justify-center`}>
@@ -138,13 +144,21 @@ export default function LeaderboardPage() {
                       <RankIcon rank={i + 1} />
                     </div>
 
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0 ${
-                      i === 0 ? "bg-gradient-to-br from-gold-400 to-gold-600 shadow-lg shadow-gold-500/30" :
-                      i === 1 ? "bg-gradient-to-br from-slate-300 to-slate-400" :
-                      i === 2 ? "bg-gradient-to-br from-orange-400 to-orange-600" :
-                      "bg-gradient-to-br from-brand-400 to-purple-500"
-                    }`}>
-                      {leader.username?.[0]?.toUpperCase()}
+                    <div className="relative">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shrink-0 ${
+                        i === 0 ? "bg-gradient-to-br from-gold-400 to-gold-600 shadow-lg shadow-gold-500/30" :
+                        i === 1 ? "bg-gradient-to-br from-slate-300 to-slate-400" :
+                        i === 2 ? "bg-gradient-to-br from-orange-400 to-orange-600" :
+                        leader.isPremium ? "bg-gradient-to-br from-gold-400 to-amber-500" :
+                        "bg-gradient-to-br from-brand-400 to-purple-500"
+                      }`}>
+                        {leader.username?.[0]?.toUpperCase()}
+                      </div>
+                      {leader.isPremium && i >= 3 && (
+                        <span className="absolute -bottom-0.5 -right-0.5 text-[8px] bg-gradient-to-r from-gold-400 to-amber-500 text-slate-900 font-black px-1 rounded">
+                          P
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -153,6 +167,11 @@ export default function LeaderboardPage() {
                           {leader.username}
                           {isCurrentUser && <span className="text-brand-400 ml-1">{lb.you}</span>}
                         </span>
+                        {leader.isPremium && (
+                          <span className="text-[10px] bg-gradient-to-r from-gold-400 to-amber-500 text-slate-900 font-black px-1.5 py-0.5 rounded">
+                            {lb.proBadge}
+                          </span>
+                        )}
                         {leader.badges?.[0] && (
                           <span className="text-sm">{leader.badges[0].icon}</span>
                         )}
@@ -182,7 +201,6 @@ export default function LeaderboardPage() {
           )}
         </div>
 
-        {/* CTA for not logged in */}
         {!currentUser && (
           <div className="mt-8 card p-6 text-center bg-gradient-to-br from-brand-600/20 to-purple-600/20 border-brand-500/30">
             <div className="text-4xl mb-3">🚀</div>
