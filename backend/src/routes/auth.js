@@ -16,7 +16,7 @@ const COOKIE_OPTIONS = {
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, referralCode } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: "请填写所有字段" });
@@ -41,6 +41,23 @@ router.post("/register", async (req, res) => {
       badges: [{ name: "新手", icon: "🌟", earnedAt: new Date() }],
     });
 
+    // Handle referral
+    if (referralCode) {
+      const referrer = await User.findOne({
+        referralCode: referralCode.toUpperCase(),
+        _id: { $ne: user._id },
+      });
+      if (referrer) {
+        await User.findByIdAndUpdate(user._id, {
+          $set: { referredBy: referrer._id },
+          $inc: { coins: 200 },
+        });
+        await User.findByIdAndUpdate(referrer._id, {
+          $inc: { coins: 300, referralCount: 1, loyaltyPoints: 50 },
+        });
+      }
+    }
+
     const token = signToken({ userId: user._id, username: user.username });
 
     res.cookie("auth_token", token, COOKIE_OPTIONS);
@@ -52,6 +69,7 @@ router.post("/register", async (req, res) => {
         email: user.email,
         coins: user.coins,
         level: user.level,
+        referralCode: user.referralCode,
       },
     });
   } catch (err) {
@@ -92,6 +110,9 @@ router.post("/login", async (req, res) => {
         level: user.level,
         totalScore: user.totalScore,
         streak: user.streak,
+        isPremium: user.getEffectivePremium(),
+        subscriptionPlan: user.subscriptionPlan,
+        referralCode: user.referralCode,
       },
     });
   } catch (err) {
@@ -119,6 +140,13 @@ router.get("/me", async (req, res) => {
     const user = await User.findById(decoded.userId).select("-password");
     if (!user) return res.json({ user: null });
 
+    user.resetDailyPlaysIfNeeded();
+    const isPremium = user.getEffectivePremium();
+    const dailyPlayLimit = user.getDailyPlayLimit();
+
+    const today = new Date().toISOString().split("T")[0];
+    const canClaimDaily = user.dailyRewardLastClaimed !== today;
+
     return res.json({
       user: {
         id: user._id,
@@ -130,8 +158,22 @@ router.get("/me", async (req, res) => {
         gamesPlayed: user.gamesPlayed,
         gamesWon: user.gamesWon,
         streak: user.streak,
+        maxStreak: user.maxStreak,
         badges: user.badges,
-        isPremium: user.isPremium,
+        isPremium,
+        subscriptionPlan: user.subscriptionPlan,
+        premiumUntil: user.premiumUntil,
+        dailyPlaysUsed: user.dailyPlaysUsed,
+        dailyPlayLimit,
+        dailyPlaysRemaining: Math.max(0, dailyPlayLimit - user.dailyPlaysUsed),
+        referralCode: user.referralCode,
+        referralCount: user.referralCount,
+        loyaltyTier: user.loyaltyTier,
+        loyaltyPoints: user.loyaltyPoints,
+        streakFreezeCount: user.streakFreezeCount,
+        canClaimDaily,
+        dailyRewardDay: user.dailyRewardDay,
+        dailyRewardStreak: user.dailyRewardStreak,
       },
     });
   } catch (err) {
