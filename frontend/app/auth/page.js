@@ -9,7 +9,7 @@ function AuthForm() {
   const searchParams = useSearchParams();
   const initialMode = searchParams.get("mode") || "login";
   const [mode, setMode] = useState(initialMode);
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", referralCode: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -28,7 +28,7 @@ function AuthForm() {
     try {
       const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
       const body = mode === "register"
-        ? { username: form.username, email: form.email, password: form.password }
+        ? { username: form.username, email: form.email, password: form.password, referralCode: form.referralCode || undefined }
         : { email: form.email, password: form.password };
 
       const res = await apiFetch(endpoint, {
@@ -69,7 +69,6 @@ function AuthForm() {
         </div>
 
         <div className="card p-8">
-          {/* Mode Switcher */}
           <div className="flex bg-slate-700/50 rounded-xl p-1 mb-6">
             <button
               onClick={() => setMode("login")}
@@ -131,6 +130,20 @@ function AuthForm() {
               />
             </div>
 
+            {mode === "register" && (
+              <div>
+                <label className="block text-slate-300 text-sm font-medium mb-2">{a.referralLabel}</label>
+                <input
+                  type="text"
+                  placeholder={a.referralPlaceholder}
+                  className="input-field"
+                  value={form.referralCode}
+                  onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
+                  maxLength={10}
+                />
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm flex items-center gap-2">
                 <span>⚠️</span> {error}
@@ -161,6 +174,7 @@ function AuthForm() {
                 <li>{a.benefit1}</li>
                 <li>{a.benefit2}</li>
                 <li>{a.benefit3}</li>
+                <li>{a.benefit4}</li>
               </ul>
             </div>
           )}

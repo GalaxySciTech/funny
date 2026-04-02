@@ -24,6 +24,7 @@ function QuizList() {
   const [user, setUser] = useState(null);
   const [selectedCat, setSelectedCat] = useState(searchParams.get("category") || "all");
   const [selectedDiff, setSelectedDiff] = useState("all");
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const { t } = useLanguage();
   const q = t.quiz;
 
@@ -61,6 +62,10 @@ function QuizList() {
       router.push("/auth?mode=register");
       return;
     }
+    if (user && !user.isPremium && user.dailyPlaysRemaining <= 0) {
+      setShowLimitModal(true);
+      return;
+    }
     router.push(`/play?id=${quiz._id}`);
   }
 
@@ -72,6 +77,43 @@ function QuizList() {
           <h1 className="text-4xl font-black text-white mb-2">{q.title}</h1>
           <p className="text-slate-400">{q.subtitle}</p>
         </div>
+
+        {/* Daily play counter */}
+        {user && (
+          <div className={`mb-6 rounded-xl p-4 flex items-center justify-between ${
+            user.isPremium
+              ? "bg-brand-500/10 border border-brand-500/20"
+              : "bg-slate-700/50 border border-slate-600/30"
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎮</span>
+              <div>
+                <span className="text-white font-bold text-sm">
+                  {q.dailyLimit}:
+                  {user.isPremium ? (
+                    <span className="text-brand-400 ml-1">♾️ {q.unlimited}</span>
+                  ) : (
+                    <span className={`ml-1 ${user.dailyPlaysRemaining > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {user.dailyPlaysRemaining}/{user.dailyPlayLimit} {q.dailyLimitUnit}
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {user.isPremium && (
+                <span className="text-xs bg-gold-500/10 text-gold-400 border border-gold-500/20 rounded-lg px-2 py-1 font-bold">
+                  {q.coinMultiplier}: {user.subscriptionPlan === "yearly" ? "3x" : "2x"} 🪙
+                </span>
+              )}
+              {!user.isPremium && (
+                <Link href="/pricing" className="text-xs text-brand-400 hover:text-brand-300 font-medium">
+                  {q.upgradeTip} →
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Category Filter */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
@@ -174,6 +216,28 @@ function QuizList() {
           </div>
         )}
       </div>
+
+      {/* Daily Limit Modal */}
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="card p-8 max-w-md w-full animate-scale-in text-center">
+            <div className="text-6xl mb-4">😱</div>
+            <h3 className="text-2xl font-black text-white mb-2">{q.dailyLimitReached}</h3>
+            <p className="text-slate-400 mb-6">{q.dailyLimitDesc}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="flex-1 btn-secondary"
+              >
+                关闭
+              </button>
+              <Link href="/pricing" className="flex-1 btn-primary" onClick={() => setShowLimitModal(false)}>
+                {q.upgradePro}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -96,6 +96,10 @@ function PlayGame() {
       const res = await apiFetch(`/api/quiz/play?id=${quizId}`);
       const data = await res.json();
       if (!res.ok) {
+        if (data.error === "daily_limit_reached") {
+          setError(data.message || pl.noPlaysLeft);
+          return;
+        }
         setError(data.error || pl.loadFailed);
         return;
       }
@@ -108,7 +112,6 @@ function PlayGame() {
     }
   }
 
-  // Countdown
   useEffect(() => {
     if (phase !== "countdown") return;
     if (countdown <= 0) {
@@ -120,7 +123,6 @@ function PlayGame() {
     return () => clearTimeout(t);
   }, [phase, countdown]);
 
-  // Timer
   useEffect(() => {
     if (phase !== "playing") return;
     if (timeLeft <= 0) {
@@ -174,13 +176,19 @@ function PlayGame() {
   }
 
   if (error) {
+    const isLimitError = error.includes("免费次数") || error.includes("plays left");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="card p-10 text-center max-w-md">
-          <div className="text-5xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold text-white mb-2">{pl.loadFailed}</h2>
+          <div className="text-5xl mb-4">{isLimitError ? "😱" : "😕"}</div>
+          <h2 className="text-2xl font-bold text-white mb-2">{isLimitError ? pl.noPlaysLeft : pl.loadFailed}</h2>
           <p className="text-slate-400 mb-6">{error}</p>
-          <Link href="/quiz" className="btn-primary">{pl.backToQuiz}</Link>
+          <div className="flex gap-3 justify-center">
+            <Link href="/quiz" className="btn-secondary">{pl.backToQuiz}</Link>
+            {isLimitError && (
+              <Link href="/pricing" className="btn-primary">{pl.upgradeForMore}</Link>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -222,6 +230,7 @@ function PlayGame() {
     const accuracy = result?.accuracy ?? 0;
     const isGreat = accuracy >= 80;
     const isGood = accuracy >= 60;
+    const hasMultiplier = result?.coinMultiplier > 1;
 
     return (
       <>
@@ -238,7 +247,7 @@ function PlayGame() {
               <p className="text-slate-400 text-lg">{pl.accuracy}{accuracy}%</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-slate-700/50 rounded-xl p-4 text-center">
                 <div className="text-3xl font-black text-brand-400">{result?.score ?? score}</div>
                 <div className="text-slate-400 text-sm mt-1">{pl.totalScore}</div>
@@ -254,6 +263,65 @@ function PlayGame() {
                 <div className="text-slate-400 text-sm mt-1">{pl.coinsEarned}</div>
               </div>
             </div>
+
+            {/* Bonus breakdown */}
+            {(hasMultiplier || result?.streakBonus > 0 || result?.perfectBonus > 0) && (
+              <div className="bg-slate-700/30 rounded-xl p-4 mb-6 space-y-2">
+                {hasMultiplier && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-brand-400 font-medium">
+                      💎 {pl.proMultiplier.replace("{n}", result.coinMultiplier)}
+                    </span>
+                    <span className="text-gold-400 font-bold">+{result.premiumBonus} 🪙</span>
+                  </div>
+                )}
+                {result?.streakBonus > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-orange-400 font-medium">🔥 {pl.streakBonus}</span>
+                    <span className="text-gold-400 font-bold">+{result.streakBonus} 🪙</span>
+                  </div>
+                )}
+                {result?.perfectBonus > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-emerald-400 font-medium">💯 {pl.perfectBonus}</span>
+                    <span className="text-gold-400 font-bold">+{result.perfectBonus} 🪙</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Daily plays remaining */}
+            {result?.dailyPlaysRemaining !== null && result?.dailyPlaysRemaining !== undefined && (
+              <div className={`rounded-xl p-3 mb-6 text-center text-sm font-medium ${
+                result.dailyPlaysRemaining > 0
+                  ? "bg-slate-700/30 text-slate-400"
+                  : "bg-red-500/10 border border-red-500/20 text-red-400"
+              }`}>
+                {result.dailyPlaysRemaining > 0
+                  ? pl.dailyPlaysLeft.replace("{n}", result.dailyPlaysRemaining)
+                  : (
+                    <div className="flex items-center justify-center gap-2">
+                      <span>{pl.noPlaysLeft}</span>
+                      <Link href="/pricing" className="text-brand-400 hover:text-brand-300 underline">
+                        {pl.upgradeForMore}
+                      </Link>
+                    </div>
+                  )
+                }
+              </div>
+            )}
+
+            {/* Upgrade CTA for free users */}
+            {!hasMultiplier && result?.coinsEarned > 0 && (
+              <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-4 mb-6 text-center">
+                <p className="text-brand-400 text-sm font-medium">
+                  💎 升级Pro后这局可以赚到 <span className="font-black text-lg">{result.coinsEarned * 2}~{result.coinsEarned * 3}</span> 金币！
+                </p>
+                <Link href="/pricing" className="inline-block mt-2 text-xs text-brand-400 hover:text-brand-300 underline">
+                  {pl.upgradeForMore}
+                </Link>
+              </div>
+            )}
 
             {/* Answer Review */}
             {result?.results && (
@@ -324,7 +392,6 @@ function PlayGame() {
 
   return (
     <div className="min-h-screen py-6 px-4">
-      {/* Header */}
       <div className="max-w-3xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-3">
           <Link href="/quiz" className="text-slate-400 hover:text-white text-sm flex items-center gap-1">
@@ -337,8 +404,6 @@ function PlayGame() {
             🪙 {score} {pl.scoreLabel}
           </div>
         </div>
-
-        {/* Progress Bar */}
         <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-brand-500 to-purple-500 rounded-full transition-all duration-500"
@@ -347,7 +412,6 @@ function PlayGame() {
         </div>
       </div>
 
-      {/* Question Card */}
       <div className="max-w-3xl mx-auto">
         <div className="card p-8 mb-6 animate-fade-in">
           <div className="flex items-start justify-between gap-6">
@@ -364,7 +428,6 @@ function PlayGame() {
           </div>
         </div>
 
-        {/* Options */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           {question.options.map((option, i) => {
             const isSelected = selected === i;
@@ -404,7 +467,6 @@ function PlayGame() {
           })}
         </div>
 
-        {/* Explanation */}
         {showExplanation && question.explanation && (
           <div className="card p-4 border-brand-500/20 bg-brand-500/5 animate-slide-up">
             <div className="flex items-start gap-2">

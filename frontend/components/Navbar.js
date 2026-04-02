@@ -37,13 +37,13 @@ export default function Navbar() {
     { href: "/", label: t.nav.home, icon: "🏠" },
     { href: "/quiz", label: t.nav.quiz, icon: "📚" },
     { href: "/leaderboard", label: t.nav.leaderboard, icon: "🏆" },
+    { href: "/pricing", label: t.nav.pricing, icon: "💎" },
   ];
 
   return (
     <nav className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700/50 shadow-xl">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <span className="text-2xl group-hover:scale-110 transition-transform">🧠</span>
             <span className="font-black text-xl bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent">
@@ -52,7 +52,6 @@ export default function Navbar() {
             <span className="badge badge-gold hidden sm:flex">Pro</span>
           </Link>
 
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
@@ -70,9 +69,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* User Actions */}
           <div className="flex items-center gap-3">
-            {/* Language Toggle */}
             <button
               onClick={toggleLang}
               title={lang === "zh" ? "Switch to English" : "切换中文"}
@@ -83,19 +80,62 @@ export default function Navbar() {
 
             {user ? (
               <>
+                {/* Daily play counter for free users */}
+                {!user.isPremium && (
+                  <div className="hidden sm:flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-1.5">
+                    <span className="text-orange-400 text-xs font-bold">
+                      🎮 {user.dailyPlaysRemaining ?? "?"}/{user.dailyPlayLimit ?? 3}
+                    </span>
+                  </div>
+                )}
+
+                {/* Daily reward indicator */}
+                {user.canClaimDaily && (
+                  <Link
+                    href="/profile?tab=subscription"
+                    className="hidden sm:flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-2.5 py-1.5 hover:bg-emerald-500/20 transition-all animate-pulse"
+                  >
+                    <span className="text-sm">🎁</span>
+                    <span className="text-emerald-400 text-xs font-bold">{t.nav.dailyReward}</span>
+                  </Link>
+                )}
+
                 <Link href="/profile" className="hidden sm:flex items-center gap-2 bg-gold-500/10 border border-gold-500/20 rounded-xl px-3 py-1.5 hover:bg-gold-500/20 transition-all">
                   <span className="text-gold-400">🪙</span>
                   <span className="text-gold-400 font-bold text-sm">{user.coins?.toLocaleString()}</span>
                 </Link>
+
                 <Link
                   href="/profile"
                   className="hidden sm:flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-sm font-bold">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    user.isPremium
+                      ? "bg-gradient-to-br from-gold-400 to-amber-500 ring-2 ring-gold-400/50"
+                      : "bg-gradient-to-br from-brand-400 to-purple-500"
+                  }`}>
                     {user.username?.[0]?.toUpperCase()}
                   </div>
-                  <span className="text-sm text-slate-300 font-medium">{user.username}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-slate-300 font-medium">{user.username}</span>
+                    {user.isPremium && (
+                      <span className="text-xs bg-gradient-to-r from-gold-400 to-amber-500 text-slate-900 font-black px-1.5 py-0.5 rounded-md">
+                        PRO
+                      </span>
+                    )}
+                  </div>
                 </Link>
+
+                {/* Upgrade CTA for free users */}
+                {!user.isPremium && (
+                  <Link
+                    href="/pricing"
+                    className="hidden sm:flex items-center gap-1 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-lg shadow-brand-500/20"
+                  >
+                    💎 {t.nav.upgrade}
+                  </Link>
+                )}
+
                 <button
                   onClick={handleLogout}
                   className="hidden sm:block text-slate-400 hover:text-white text-sm px-3 py-1.5 rounded-lg hover:bg-slate-700/50 transition-all"
@@ -114,7 +154,6 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile menu button */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden p-2 rounded-lg hover:bg-slate-700 transition-colors"
@@ -128,7 +167,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {menuOpen && (
           <div className="md:hidden pb-4 border-t border-slate-700/50 mt-2 pt-4 space-y-2 animate-fade-in">
             {navLinks.map((link) => (
@@ -150,7 +188,13 @@ export default function Navbar() {
               <>
                 <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-700/50">
                   <span>👤</span> {user.username} · 🪙{user.coins}
+                  {user.isPremium && <span className="text-xs bg-gold-500 text-slate-900 font-bold px-1.5 py-0.5 rounded-md ml-1">PRO</span>}
                 </Link>
+                {!user.isPremium && (
+                  <Link href="/pricing" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm bg-brand-600/20 text-brand-300">
+                    💎 {t.nav.upgrade}
+                  </Link>
+                )}
                 <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:bg-slate-700/50">
                   {t.nav.logoutMobile}
                 </button>
