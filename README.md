@@ -24,23 +24,22 @@
 
 ## 快速启动
 
+> **端口说明**：本项目 MongoDB 默认使用 **27018** 端口（而非常见的 27017），避免与服务器上其他项目的 MongoDB 冲突。如果你的 27018 也被占用，修改 `.env` 中的 `MONGO_PORT` 或 `MONGODB_URI` 即可。
+
 ### 方式一：纯前端本地开发（最简单）
 
 前端内置了 Next.js API Routes，无需单独启动后端，只需要一个 MongoDB 即可。
 
 ```bash
-# 1. 启动 MongoDB（任选一种）
-#    a) 本地已安装 MongoDB：确保 mongod 正在运行
-#    b) 用 Docker：
-docker run -d -p 27017:27017 --name quizmaster_mongo mongo:7
+# 1. 启动 MongoDB（映射到 27018 端口，避免与其他项目冲突）
+docker run -d -p 27018:27017 --name quizmaster_mongo mongo:7
 
 # 2. 进入前端目录
 cd frontend
 
 # 3. 配置环境变量
 cp .env.example .env.local
-# 编辑 .env.local，确保 MONGODB_URI 指向你的 MongoDB
-# 默认值：mongodb://localhost:27017/quizmaster
+# .env.local 默认已指向 mongodb://localhost:27018/quizmaster，无需修改
 
 # 4. 安装依赖
 npm install
@@ -61,13 +60,13 @@ npm run dev
 适用于需要将后端部署到独立服务器的场景。
 
 ```bash
-# ── 终端 1：启动 MongoDB ──
-docker run -d -p 27017:27017 --name quizmaster_mongo mongo:7
+# ── 终端 1：启动 MongoDB（27018 端口） ──
+docker run -d -p 27018:27017 --name quizmaster_mongo mongo:7
 
 # ── 终端 2：启动后端 ──
 cd backend
 cp .env.example .env
-# 编辑 .env（参考下方环境变量说明）
+# .env 默认已指向 mongodb://localhost:27018/quizmaster
 npm install
 npm run seed    # 首次运行，初始化题库
 npm run dev     # 开发模式（nodemon 热重载）
@@ -93,6 +92,7 @@ npm run dev
 # 1. 配置环境变量
 cp docker-compose.env.example .env
 # 编辑 .env，设置 JWT_SECRET 和 ALLOWED_ORIGINS
+# 默认 MONGO_PORT=27018，如需修改也在此处
 
 # 2. 构建并启动（MongoDB + 后端）
 docker compose up -d --build
@@ -108,13 +108,38 @@ docker compose logs -f backend
 
 ---
 
+### 端口冲突处理
+
+如果你的服务器上 27018 端口也被占用了，只需两步：
+
+**Docker Compose 方式**：编辑根目录 `.env`
+
+```bash
+MONGO_PORT=27019   # 改成任意空闲端口
+```
+
+**本地开发方式**：
+
+```bash
+# 1. 启动 MongoDB 时换端口
+docker run -d -p 27019:27017 --name quizmaster_mongo mongo:7
+
+# 2. 修改对应的环境变量
+#    backend/.env 或 frontend/.env.local 中：
+MONGODB_URI=mongodb://localhost:27019/quizmaster
+```
+
+> **注意**：Docker Compose 内部容器之间的连接始终使用 27017（容器内部端口），`MONGO_PORT` 只影响宿主机映射。后端容器的 `MONGODB_URI` 无需修改。
+
+---
+
 ## 环境变量
 
 ### 后端（`backend/.env`）
 
 | 变量 | 说明 | 默认值 |
 |---|---|---|
-| `MONGODB_URI` | MongoDB 连接字符串 | `mongodb://localhost:27017/quizmaster` |
+| `MONGODB_URI` | MongoDB 连接字符串 | `mongodb://localhost:27018/quizmaster` |
 | `JWT_SECRET` | JWT 签名密钥 | `change_me_to_a_random_secret_string` |
 | `PORT` | 监听端口 | `5000` |
 | `ALLOWED_ORIGINS` | 允许跨域的前端地址（逗号分隔） | `http://localhost:3000` |
@@ -125,8 +150,17 @@ docker compose logs -f backend
 | 变量 | 说明 | 默认值 |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | 独立后端地址（留空则使用内置 API Routes） | 空 |
-| `MONGODB_URI` | MongoDB 连接字符串（使用内置 API 时需要） | `mongodb://localhost:27017/quizmaster` |
+| `MONGODB_URI` | MongoDB 连接字符串（使用内置 API 时需要） | `mongodb://localhost:27018/quizmaster` |
 | `JWT_SECRET` | JWT 签名密钥（使用内置 API 时需要） | `change_me_to_a_random_secret_string` |
+
+### Docker Compose（根目录 `.env`）
+
+| 变量 | 说明 | 默认值 |
+|---|---|---|
+| `JWT_SECRET` | JWT 签名密钥 | `change_me_to_a_long_random_string` |
+| `ALLOWED_ORIGINS` | 允许跨域的前端地址 | `https://your-app.vercel.app` |
+| `MONGO_PORT` | MongoDB 映射到宿主机的端口 | `27018` |
+| `BACKEND_PORT` | 后端映射到宿主机的端口 | `5000` |
 
 ---
 
