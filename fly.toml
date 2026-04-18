@@ -1,0 +1,26 @@
+# Fly.io app for QuizMaster Express API (Node + PostgreSQL via Supabase)
+# Create the app once: flyctl apps create <your-app-name>
+# Then set secrets: flyctl secrets set DATABASE_URL=... JWT_SECRET=... ALLOWED_ORIGINS=https://your-app.vercel.app
+
+app = "quizmaster-api"
+primary_region = "hkg"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "5000"
+
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

@@ -1,16 +1,31 @@
-const mongoose = require("mongoose");
+const { Pool } = require("pg");
 
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/quizmaster";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("DATABASE_URL is not set");
+  process.exit(1);
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl:
+    process.env.PGSSLMODE === "disable"
+      ? false
+      : { rejectUnauthorized: false },
+  max: 10,
+});
 
 async function connectDB() {
   try {
-    await mongoose.connect(MONGODB_URI, { bufferCommands: false });
-    console.log("MongoDB connected:", MONGODB_URI.replace(/:\/\/.*@/, "://***@"));
+    const client = await pool.connect();
+    await client.query("SELECT 1");
+    client.release();
+    const safe = connectionString.replace(/:[^:@/]+@/, ":****@");
+    console.log("PostgreSQL connected:", safe);
   } catch (err) {
-    console.error("MongoDB connection error:", err.message);
+    console.error("PostgreSQL connection error:", err.message);
     process.exit(1);
   }
 }
 
-module.exports = connectDB;
+module.exports = { pool, connectDB };

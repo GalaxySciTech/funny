@@ -1,16 +1,18 @@
 version: "3.9"
 
 services:
-  mongo:
-    image: mongo:7
-    container_name: quizmaster_mongo
+  postgres:
+    image: postgres:16-alpine
+    container_name: quizmaster_postgres
     restart: unless-stopped
-    volumes:
-      - mongo_data:/data/db
-    ports:
-      - "${MONGO_PORT:-27018}:27017"
     environment:
-      MONGO_INITDB_DATABASE: quizmaster
+      POSTGRES_USER: quizmaster
+      POSTGRES_PASSWORD: quizmaster
+      POSTGRES_DB: quizmaster
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   backend:
     build:
@@ -18,15 +20,15 @@ services:
     container_name: quizmaster_backend
     restart: unless-stopped
     depends_on:
-      - mongo
+      - postgres
     ports:
       - "${BACKEND_PORT:-5000}:5000"
     environment:
       NODE_ENV: production
       PORT: 5000
-      MONGODB_URI: mongodb://mongo:27017/quizmaster
+      DATABASE_URL: postgresql://quizmaster:quizmaster@postgres:5432/quizmaster
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
 
 volumes:
-  mongo_data:
+  pg_data:

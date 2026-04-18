@@ -5,9 +5,10 @@
 ## 项目结构
 
 ```
-├── frontend/          # Next.js 14 前端（App Router + Tailwind CSS）
-├── backend/           # Express.js 独立后端 API
-├── docker-compose.yml # 一键启动 MongoDB + 后端
+├── frontend/                 # Next.js 14 前端（部署到 Vercel）
+├── backend/                  # Express.js API（部署到 Fly.io）
+├── supabase/migrations/      # PostgreSQL 建表 SQL（在 Supabase 执行）
+├── fly.toml                  # Fly.io 应用配置（根目录，构建 backend/Dockerfile）
 └── README.md
 ```
 
@@ -16,120 +17,91 @@
 | 层 | 技术 |
 |---|---|
 | 前端 | Next.js 14、React 18、Tailwind CSS 3 |
-| 后端 | Express 4、Mongoose 8、JWT |
-| 数据库 | MongoDB 7 |
-| 部署 | Docker Compose / Vercel + VPS |
+| 后端 | Express 4、node-pg、JWT |
+| 数据库 | PostgreSQL（Supabase 托管） |
+| 部署 | 前端 Vercel、API Fly.io、数据库 Supabase |
 
 ---
 
-## 快速启动
+## 快速启动（本地）
 
-> **端口说明**：本项目 MongoDB 默认使用 **27018** 端口（而非常见的 27017），避免与服务器上其他项目的 MongoDB 冲突。如果你的 27018 也被占用，修改 `.env` 中的 `MONGO_PORT` 或 `MONGODB_URI` 即可。
+### 1. 数据库（PostgreSQL）
 
-### 方式一：纯前端本地开发（最简单）
-
-前端内置了 Next.js API Routes，无需单独启动后端，只需要一个 MongoDB 即可。
+最简单方式是用根目录 Docker Compose（内置 Postgres）：
 
 ```bash
-# 1. 启动 MongoDB（映射到 27018 端口，避免与其他项目冲突）
-docker run -d -p 27018:27017 --name quizmaster_mongo mongo:7
-
-# 2. 进入前端目录
-cd frontend
-
-# 3. 配置环境变量
-cp .env.example .env.local
-# .env.local 默认已指向 mongodb://localhost:27018/quizmaster，无需修改
-
-# 4. 安装依赖
-npm install
-
-# 5. 初始化题库数据（首次运行）
-npm run seed
-
-# 6. 启动开发服务器
-npm run dev
+cp docker-compose.env.example .env
+# 编辑 .env：JWT_SECRET、ALLOWED_ORIGINS
+docker compose up -d --build
 ```
 
-打开浏览器访问 **http://localhost:3000** 即可。
-
----
-
-### 方式二：前端 + 独立后端（前后端分离）
-
-适用于需要将后端部署到独立服务器的场景。
+### 2. 建表并灌入题库
 
 ```bash
-# ── 终端 1：启动 MongoDB（27018 端口） ──
-docker run -d -p 27018:27017 --name quizmaster_mongo mongo:7
-
-# ── 终端 2：启动后端 ──
 cd backend
 cp .env.example .env
-# .env 默认已指向 mongodb://localhost:27018/quizmaster
+# DATABASE_URL=postgresql://quizmaster:quizmaster@localhost:5433/quizmaster
 npm install
-npm run seed    # 首次运行，初始化题库
-npm run dev     # 开发模式（nodemon 热重载）
+npm run db:migrate
+npm run seed
+```
 
-# ── 终端 3：启动前端 ──
+### 3. 启动后端
+
+```bash
+cd backend
+npm run dev
+# http://localhost:5000/health
+```
+
+### 4. 启动前端
+
+```bash
 cd frontend
 cp .env.example .env.local
-# 编辑 .env.local，设置：
-#   NEXT_PUBLIC_API_URL=http://localhost:5000
+# NEXT_PUBLIC_API_URL=http://localhost:5000
 npm install
 npm run dev
 ```
 
-- 前端：**http://localhost:3000**
-- 后端：**http://localhost:5000**
-- 后端健康检查：**http://localhost:5000/health**
+打开 **http://localhost:3000**。前端只调用 `NEXT_PUBLIC_API_URL` 下的 API，不再内置 Next.js Route Handlers。
 
 ---
 
-### 方式三：Docker Compose（一键生产部署）
+## 生产部署：Vercel + Fly.io + Supabase
+
+### Supabase
+
+1. 新建项目，在 **SQL Editor** 中执行 `supabase/migrations/001_initial.sql`（或使用 **Table Editor** 等价建表）。
+2. 在 **Project Settings → Database** 复制 **Connection string**（URI），端口 **5432**，密码用项目数据库密码。连接串建议带 `?sslmode=require`。
+
+### Fly.io（后端 API）
+
+1. 安装 CLI：[https://fly.io/docs/hands-on/install-flyctl/](https://fly.io/docs/hands-on/install-flyctl/)
+2. `flyctl auth login`
+3. 编辑根目录 `fly.toml`，将 `app = "quizmaster-api"` 改成你的全局唯一应用名。
+4. 首次部署（在仓库根目录）：
 
 ```bash
-# 1. 配置环境变量
-cp docker-compose.env.example .env
-# 编辑 .env，设置 JWT_SECRET 和 ALLOWED_ORIGINS
-# 默认 MONGO_PORT=27018，如需修改也在此处
-
-# 2. 构建并启动（MongoDB + 后端）
-docker compose up -d --build
-
-# 3. 初始化题库（首次部署）
-docker compose exec backend node src/scripts/seed.js
-
-# 4. 查看日志
-docker compose logs -f backend
+flyctl launch --no-deploy --copy-config --dockerfile backend/Dockerfile --name <你的应用名>
+flyctl secrets set DATABASE_URL="postgresql://..." JWT_SECRET="..." ALLOWED_ORIGINS="https://你的前端.vercel.app"
+flyctl deploy
 ```
 
-后端运行在 `http://your-server:5000`，前端单独部署到 Vercel 并设置 `NEXT_PUBLIC_API_URL`。
-
----
-
-### 端口冲突处理
-
-如果你的服务器上 27018 端口也被占用了，只需两步：
-
-**Docker Compose 方式**：编辑根目录 `.env`
+5. 部署后执行一次迁移与种子（可用 **SSH** 或本地指向同一 `DATABASE_URL`）：
 
 ```bash
-MONGO_PORT=27019   # 改成任意空闲端口
+# 本地（设置与 Fly 相同的 DATABASE_URL）
+cd backend && npm run db:migrate && npm run seed
 ```
 
-**本地开发方式**：
+API 根地址形如：`https://<你的应用名>.fly.dev`。
 
-```bash
-# 1. 启动 MongoDB 时换端口
-docker run -d -p 27019:27017 --name quizmaster_mongo mongo:7
+### Vercel（前端）
 
-# 2. 修改对应的环境变量
-#    backend/.env 或 frontend/.env.local 中：
-MONGODB_URI=mongodb://localhost:27019/quizmaster
-```
-
-> **注意**：Docker Compose 内部容器之间的连接始终使用 27017（容器内部端口），`MONGO_PORT` 只影响宿主机映射。后端容器的 `MONGODB_URI` 无需修改。
+1. 导入 Git 仓库，**Root Directory** 选 `frontend`。
+2. 环境变量：`NEXT_PUBLIC_API_URL=https://<你的应用名>.fly.dev`（无尾部斜杠）。
+3. 部署完成后，将 Fly 的 `ALLOWED_ORIGINS` 更新为 Vercel 生产域名（含 `https://`），再执行 `flyctl secrets set ALLOWED_ORIGINS=...` 或 `flyctl deploy` 前设置。
 
 ---
 
@@ -137,30 +109,29 @@ MONGODB_URI=mongodb://localhost:27019/quizmaster
 
 ### 后端（`backend/.env`）
 
-| 变量 | 说明 | 默认值 |
-|---|---|---|
-| `MONGODB_URI` | MongoDB 连接字符串 | `mongodb://localhost:27018/quizmaster` |
-| `JWT_SECRET` | JWT 签名密钥 | `change_me_to_a_random_secret_string` |
-| `PORT` | 监听端口 | `5000` |
-| `ALLOWED_ORIGINS` | 允许跨域的前端地址（逗号分隔） | `http://localhost:3000` |
-| `NODE_ENV` | 运行环境 | `development` |
+| 变量 | 说明 |
+|---|---|
+| `DATABASE_URL` | Supabase / Postgres 连接 URI |
+| `JWT_SECRET` | JWT 签名密钥 |
+| `PORT` | 监听端口（默认 5000） |
+| `ALLOWED_ORIGINS` | 允许跨域的前端来源，逗号分隔 |
+| `NODE_ENV` | `production` 时 Cookie 为 `Secure` + `SameSite=None` |
+| `PGSSLMODE` | 可选，设为 `disable` 可关闭 SSL（仅本地无 TLS 的 Postgres） |
 
 ### 前端（`frontend/.env.local`）
 
-| 变量 | 说明 | 默认值 |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | 独立后端地址（留空则使用内置 API Routes） | 空 |
-| `MONGODB_URI` | MongoDB 连接字符串（使用内置 API 时需要） | `mongodb://localhost:27018/quizmaster` |
-| `JWT_SECRET` | JWT 签名密钥（使用内置 API 时需要） | `change_me_to_a_random_secret_string` |
+| 变量 | 说明 |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | 后端 API 根 URL，生产环境必填 |
 
 ### Docker Compose（根目录 `.env`）
 
-| 变量 | 说明 | 默认值 |
-|---|---|---|
-| `JWT_SECRET` | JWT 签名密钥 | `change_me_to_a_long_random_string` |
-| `ALLOWED_ORIGINS` | 允许跨域的前端地址 | `https://your-app.vercel.app` |
-| `MONGO_PORT` | MongoDB 映射到宿主机的端口 | `27018` |
-| `BACKEND_PORT` | 后端映射到宿主机的端口 | `5000` |
+| 变量 | 说明 |
+|---|---|
+| `JWT_SECRET` | JWT 签名 |
+| `ALLOWED_ORIGINS` | 前端来源 |
+| `BACKEND_PORT` | 后端宿主机端口（默认 5000） |
+| `POSTGRES_PORT` | Postgres 宿主机端口（默认 5433） |
 
 ---
 
